@@ -1,11 +1,23 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { fetchDonorRequests, updateRequestStatusThunk, deleteRequestThunk, fetchDonorProfile } from "@/lib/store/donorRequests/donorRequestsSlice";
 
 export default function Page() {
   const [activeSection, setActiveSection] = useState("profile");
-  const { user } = useAppSelector((state) => state.auth);
+  const router = useRouter();
+  const { user, token } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!token || user.role !== "donor") {
+      router.push("/auth/donorsignin");
+    }
+  }, [token, user.role, router]);
+
+  if (!token || user.role !== "donor") {
+    return null;
+  }
   const donorName: string = user.userName || "User";
 
   return (

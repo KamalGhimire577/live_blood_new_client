@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import {
   fetchUsers,
@@ -10,11 +11,24 @@ import {
   deleteDonor,
   updateBloodRequestStatus
 } from '../../../lib/store/admin/adminSlice';
+import { Status } from '@/lib/types/type';
 
 export default function Page() {
   const [activeSection, setActiveSection] = useState("dashboard");
+  const router = useRouter();
+  const { user, token } = useAppSelector((state) => state.auth);
 
-  const adminName:string = "Admin";
+  useEffect(() => {
+    if (!token || user.role !== "admin") {
+      router.push("/auth/admin/signin");
+    }
+  }, [token, user.role, router]);
+
+  if (!token || user.role !== "admin") {
+    return null;
+  }
+
+  const adminName = user.userName || "Admin";
 
   return (
     <div className="flex min-h-screen bg-gray-100 overflow-hidden">
@@ -121,7 +135,7 @@ function DashboardSection() {
 
 function UsersSection() {
   const dispatch = useAppDispatch();
-  const { users, loading } = useAppSelector((state) => state.admin);
+  const { users, status } = useAppSelector((state) => state.admin);
 
   useEffect(() => {
     dispatch(fetchUsers());
@@ -133,7 +147,7 @@ function UsersSection() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (status === Status.LOADING) return <div>Loading...</div>;
 
   return (
     <div>
@@ -173,7 +187,7 @@ function UsersSection() {
 
 function DonorsSection() {
   const dispatch = useAppDispatch();
-  const { donors, loading } = useAppSelector((state) => state.admin);
+  const { donors, status } = useAppSelector((state) => state.admin);
 
   useEffect(() => {
     dispatch(fetchDonors());
@@ -185,7 +199,7 @@ function DonorsSection() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (status === Status.LOADING) return <div>Loading...</div>;
 
   return (
     <div>
@@ -227,17 +241,17 @@ function DonorsSection() {
 
 function RequestsSection() {
   const dispatch = useAppDispatch();
-  const { bloodRequests, loading } = useAppSelector((state) => state.admin);
+  const { bloodRequests, status } = useAppSelector((state) => state.admin);
 
   useEffect(() => {
     dispatch(fetchBloodRequests());
   }, [dispatch]);
 
-  const handleUpdateStatus = (id: string, status: string) => {
-    dispatch(updateBloodRequestStatus({ id, status }));
+  const handleUpdateStatus = (id: string, newStatus: string) => {
+    dispatch(updateBloodRequestStatus(id, newStatus));
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (status === Status.LOADING) return <div>Loading...</div>;
 
   return (
     <div>
@@ -303,13 +317,13 @@ function RequestsSection() {
 
 function DonationsSection() {
   const dispatch = useAppDispatch();
-  const { donations, loading } = useAppSelector((state) => state.admin);
+  const { donations, status } = useAppSelector((state) => state.admin);
 
   useEffect(() => {
     dispatch(fetchDonations());
   }, [dispatch]);
 
-  if (loading) return <div>Loading...</div>;
+  if (status === Status.LOADING) return <div>Loading...</div>;
 
   return (
     <div>

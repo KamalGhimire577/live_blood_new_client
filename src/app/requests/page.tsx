@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { fetchUserRequests } from "@/lib/store/userRequests/userRequestsSlice";
 import { Status } from "@/lib/types/type";
+import BloodLoader from "../Components/BloodLoader";
 
 export default function RequestsPage() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { user, token } = useAppSelector((state) => state.auth);
 
-  const { user } = useAppSelector((state) => state.auth);
+  useEffect(() => {
+  if (!token) {
+      router.push("/auth/signin");
+    }
+  }, [token, router]);
   const { requests, status, error } = useAppSelector(
     (state) => state.userRequests
   );
@@ -22,7 +30,7 @@ export default function RequestsPage() {
 
   // UI Loading/Error states
   if (status === Status.LOADING)
-    return <div className="p-8 text-center">Loading...</div>;
+    return <BloodLoader />;
 
   if (status === Status.ERROR)
     return (
