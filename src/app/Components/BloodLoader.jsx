@@ -2,11 +2,11 @@
 
 import React from "react";
 
-export default function BloodLoader() {
-  const bloodTypes = ["A+", "B+", "O−"];
+export default function BloodLoader({ fullScreen = false }) {
+  const bloodTypes = ["A+", "B+", "O−","AB+","AB-","O+"];
 
   return (
-    <div className="flex space-x-3 justify-center items-center bg-white h-screen">
+    <div className={`flex space-x-3 justify-center items-center ${fullScreen ? 'fixed inset-0 bg-white/80 backdrop-blur-sm z-50' : 'py-8'}`}>
       <span className="sr-only">Loading...</span>
 
       {bloodTypes.map((type, index) => (

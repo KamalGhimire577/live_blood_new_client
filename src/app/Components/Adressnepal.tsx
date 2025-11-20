@@ -82,14 +82,14 @@ export default function NepalLocationSelector() {
   }, [selectedDistrict]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Province */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Province
         </label>
         <select
-          className="w-full rounded-lg border px-3 py-2"
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 sm:py-2 text-base sm:text-sm bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none cursor-pointer"
           value={selectedProvince}
           onChange={(e) => {
             setSelectedProvince(e.target.value);
@@ -108,11 +108,11 @@ export default function NepalLocationSelector() {
 
       {/* District */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           District
         </label>
         <select
-          className="w-full rounded-lg border px-3 py-2"
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 sm:py-2 text-base sm:text-sm bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
           value={selectedDistrict}
           onChange={(e) => {
             setSelectedDistrict(e.target.value);
@@ -131,11 +131,11 @@ export default function NepalLocationSelector() {
 
       {/* City */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Major City
         </label>
         <select
-          className="w-full rounded-lg border px-3 py-2"
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 sm:py-2 text-base sm:text-sm bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
           value={selectedCity}
           onChange={(e) => setSelectedCity(e.target.value)}
           disabled={!selectedDistrict}
@@ -149,7 +149,7 @@ export default function NepalLocationSelector() {
         </select>
 
         {filteredCities.length === 0 && selectedDistrict && (
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 mt-2">
             No major cities listed for this district.
           </p>
         )}
