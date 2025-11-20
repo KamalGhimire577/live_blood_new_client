@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffe6e6; /* soft blood-red background */
+  --foreground: #932222; /* dark red text for contrast */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: 'Poppins', Arial, Helvetica, sans-serif;
+  --font-mono: 'Courier New', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #e6dbdb; /* dark red background for dark mode */
+    --foreground: #aa65d2; /* light text for contrast */
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Poppins', Arial, Helvetica, sans-serif;
+}
