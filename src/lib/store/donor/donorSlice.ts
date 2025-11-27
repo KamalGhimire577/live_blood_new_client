@@ -1,11 +1,12 @@
 import { Status } from "@/lib/types/type";
-import { IDonorData, IDonorInitialState, IEligibleDonorData } from "./donorSlice.types";
+import {
+  IDonorData,
+  IDonorInitialState,
+  IEligibleDonorData,
+} from "./donorSlice.types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { AppDispatch } from "../store";
 import API from "@/lib/http/api";
-
-
-
 
 const initialState: IDonorInitialState = {
   donor: {
@@ -18,7 +19,7 @@ const initialState: IDonorInitialState = {
     district: "",
     city: "",
     dateofbirth: "",
-    last_donation_date: null, // optional field
+    last_donation_date: null,
     next_eligible_date: null,
   },
   donors: [],
@@ -27,26 +28,40 @@ const initialState: IDonorInitialState = {
 
 const donorSlice = createSlice({
   name: "donor",
-  initialState: initialState,
+  initialState,
   reducers: {
-    setDonor(state: IDonorInitialState, action: PayloadAction<IDonorData>) {
+    setDonor(state, action: PayloadAction<IDonorData>) {
       state.donor = action.payload;
     },
-    setDonors(state: IDonorInitialState, action: PayloadAction<IEligibleDonorData[]>) {
+    setDonors(state, action: PayloadAction<IEligibleDonorData[]>) {
       state.donors = action.payload;
     },
-    setStatus(state: IDonorInitialState, action: PayloadAction<Status>) {
+    setStatus(state, action: PayloadAction<Status>) {
       state.status = action.payload;
+    },
+
+    // ⭐ RESET STATE (Fix caching issue)
+    resetDonorState(state) {
+      state.status = Status.IDLE;
+      state.donor = initialState.donor;
+      state.donors = [];
     },
   },
 });
-export const { setDonor, setDonors, setStatus } = donorSlice.actions;
+
+export const { setDonor, setDonors, setStatus, resetDonorState } =
+  donorSlice.actions;
 export default donorSlice.reducer;
+
+// ==========================
+//     THUNKS
+// ==========================
 
 export function registerDonor(data: IDonorData) {
   return async function registerDonorThunk(dispatch: AppDispatch) {
     try {
       dispatch(setStatus(Status.LOADING));
+
       const response = await API.post("auth/register/donor", data);
 
       if (response.status === 201) {
@@ -65,7 +80,11 @@ export function fetchAllEligibleDonors() {
   return async function fetchAllEligibleDonorsThunk(dispatch: AppDispatch) {
     try {
       dispatch(setStatus(Status.LOADING));
-      const response = await API.get<{message: string, data: IEligibleDonorData[]}>("donor/eligible");
+
+      const response = await API.get<{
+        message: string;
+        data: IEligibleDonorData[];
+      }>("donor/eligible");
 
       if (response.status === 200) {
         dispatch(setDonors(response.data.data));
@@ -79,4 +98,3 @@ export function fetchAllEligibleDonors() {
     }
   };
 }
-

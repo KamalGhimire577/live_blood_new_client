@@ -10,7 +10,8 @@ export default function GlobalLoader() {
   const bloodRequestStatus = useAppSelector((state) => state.bloodrequest.status);
   const adminStatus = useAppSelector((state) => state.admin.status);
 
-  const isLoading = [authStatus, donorAuthStatus, bloodRequestStatus, adminStatus].includes(Status.LOADING);
+  // Only show loader for auth operations, not admin CRUD operations
+  const isLoading = [authStatus, donorAuthStatus, bloodRequestStatus].includes(Status.LOADING);
 
   if (!isLoading) return null;
 

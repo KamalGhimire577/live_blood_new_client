@@ -13,7 +13,7 @@ import LoginSuccessPopup from "./../../Components/LoginSuccessPopup";
 export default function SignIn() {
 
   const dispatch = useAppDispatch()
-  const router = useRouter()
+
   const {user, status} = useAppSelector((store=>store.auth))
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   
@@ -43,6 +43,9 @@ export default function SignIn() {
 
     if(status === Status.LOADING){
       return <BloodLoader />
+    }
+    if(status === Status.ERROR){
+      return <h1>some things went wrong </h1>
     }
 
   return (

@@ -1,7 +1,10 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import Toast from "../../Components/Toast";
+
 import {
   fetchUsers,
   fetchDonors,
@@ -9,26 +12,48 @@ import {
   fetchDonations,
   deleteUser,
   deleteDonor,
-  updateBloodRequestStatus
-} from '../../../lib/store/admin/adminSlice';
-import { Status } from '@/lib/types/type';
+  completeBloodRequest,
+  updateBloodRequestStatus,
+  deleteBloodRequest,
+  IUser,
+  IDonor,
+  IBloodRequest,
+} from "@/lib/store/admin/adminSlice";
 
-export default function Page() {
+import { Status } from "@/lib/types/type";
+import {getProvinceName, getDistrictName } from "@/data/nepalLocations";
+
+
+import BloodLoader from "@/app/Components/BloodLoader";
+
+export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
   const router = useRouter();
   const { user, token } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
 
+  const showToast = (message: string, type: "success" | "error") =>
+    setToast({ message, type });
+
+  // Redirect if not admin
   useEffect(() => {
-    if (!token || user.role !== "admin") {
-      router.push("/auth/admin/signin");
-    }
+    if (!token || user.role !== "admin") router.push("/auth/admin/signin");
   }, [token, user.role, router]);
 
-  if (!token || user.role !== "admin") {
-    return null;
-  }
+  if (!token || user.role !== "admin") return null;
 
   const adminName = user.userName || "Admin";
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/auth/admin/signin");
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-100 overflow-hidden">
@@ -67,7 +92,10 @@ export default function Page() {
         </nav>
 
         <div className="p-4 border-t border-gray-200">
-          <button className="w-full bg-red-500 text-red py-2 rounded-md hover:bg-red-600 transition-all">
+          <button
+            onClick={handleLogout}
+            className="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition-all"
+          >
             Logout
           </button>
         </div>
@@ -75,65 +103,97 @@ export default function Page() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        {/* Top Navbar */}
-        <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
-          <h1 className="text-xl font-bold text-red-600 capitalize">
-            {activeSection.replace(/([A-Z])/g, " $1")}
-          </h1>
+        <Header activeSection={activeSection} adminName={adminName} />
 
-          <div className="flex items-center gap-4">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold">
-              {adminName[0]}
-            </div>
-          </div>
-        </header>
-
-        {/* Section Content */}
         <main className="p-6 space-y-6">
           {activeSection === "dashboard" && <DashboardSection />}
-          {activeSection === "users" && <UsersSection />}
-          {activeSection === "donors" && <DonorsSection />}
-          {activeSection === "requests" && <RequestsSection />}
-          {activeSection === "donations" && <DonationsSection />}
+          {activeSection === "users" && <UsersSection showToast={showToast} />}
+          {activeSection === "donors" && (
+            <DonorsSection showToast={showToast} />
+          )}
+          {activeSection === "requests" && (
+            <RequestsSection showToast={showToast} />
+          )}
+          {activeSection === "donations" && (
+            <DonationsSection showToast={showToast} />
+          )}
           {activeSection === "settings" && <SettingsSection />}
         </main>
       </div>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
 
-/* ------------------- SECTIONS ------------------- */
+/* ========================= Header ========================= */
+function Header({ activeSection, adminName }: any) {
+  return (
+    <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
+      <h1 className="text-xl font-bold text-red-600 capitalize">
+        {activeSection}
+      </h1>
 
+      <div className="flex items-center gap-4">
+        <input
+          type="text"
+          placeholder="Search..."
+          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+        />
+        <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold">
+          {adminName[0]}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ========================= Dashboard Section ========================= */
 function DashboardSection() {
   const dispatch = useAppDispatch();
-  const { users, donors, bloodRequests } = useAppSelector((state) => state.admin);
+  const { users, donors, bloodRequests, donations, status } = useAppSelector(
+    (state) => state.admin
+  );
 
   useEffect(() => {
     dispatch(fetchUsers());
     dispatch(fetchDonors());
     dispatch(fetchBloodRequests());
+    dispatch(fetchDonations());
   }, [dispatch]);
 
-  const pendingRequests = bloodRequests.filter(r => r.status === 'pending').length;
+  if (status === Status.LOADING) return <BloodLoader />;
+
+  const pendingRequests = bloodRequests.filter((r) => r.status === "pending");
 
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gray-800 mb-4">Overview</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard title="Total Users" value={users.length.toString()} />
         <StatCard title="Active Donors" value={donors.length.toString()} />
-        <StatCard title="Pending Requests" value={pendingRequests.toString()} />
+        <StatCard
+          title="Pending Requests"
+          value={pendingRequests.length.toString()}
+        />
+        <StatCard
+          title="Completed Donations"
+          value={donations.length.toString()}
+        />
       </div>
     </div>
   );
 }
 
-function UsersSection() {
+/* ========================= Users Section ========================= */
+function UsersSection({ showToast }: any) {
   const dispatch = useAppDispatch();
   const { users, status } = useAppSelector((state) => state.admin);
 
@@ -141,51 +201,45 @@ function UsersSection() {
     dispatch(fetchUsers());
   }, [dispatch]);
 
-  const handleDeleteUser = (id: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      dispatch(deleteUser(id));
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+      await dispatch(deleteUser(id));
+      showToast("User deleted successfully", "success");
+    } catch {
+      showToast("Failed to delete user", "error");
     }
   };
 
-  if (status === Status.LOADING) return <div>Loading...</div>;
+  if (status === Status.LOADING) return <BloodLoader />;
+
+  const tableData = users.map((user: IUser, index) => ({
+    sn: index + 1,
+    userName: user.userName,
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    role: user.role,
+    actions: (
+      <button
+        className="text-red-600 hover:text-red-900"
+        onClick={() => handleDeleteUser(user.id)}
+      >
+        Delete
+      </button>
+    ),
+  }));
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">Users</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {users.map((user: any) => (
-              <tr key={user.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleDeleteUser(user.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <SectionTable
+      title="Users"
+      columns={["SN", "User Name", "Email", "Phone", "Role", "Actions"]}
+      data={tableData}
+    />
   );
 }
-
-function DonorsSection() {
+///------------donor-------------section--------////
+export function DonorsSection({ showToast }: any) {
   const dispatch = useAppDispatch();
   const { donors, status } = useAppSelector((state) => state.admin);
 
@@ -193,53 +247,72 @@ function DonorsSection() {
     dispatch(fetchDonors());
   }, [dispatch]);
 
-  const handleDeleteDonor = (id: string) => {
-    if (confirm('Are you sure you want to delete this donor?')) {
-      dispatch(deleteDonor(id));
+  console.log("Donors from Redux:", donors);
+  console.log("Status:", status);
+
+  // Handle Delete Donor
+  const handleDeleteDonor = async (id: string) => {
+    if (!confirm("Delete donor?")) return;
+
+    try {
+      await dispatch(deleteDonor(id));
+      showToast("Donor deleted successfully", "success");
+    } catch {
+      showToast("Failed to delete donor", "error");
     }
   };
 
-  if (status === Status.LOADING) return <div>Loading...</div>;
+  if (status === Status.LOADING) return <BloodLoader />;
+
+  // Prepare Table Data
+  const tableData = donors.map((donor: IDonor, index: number) => ({
+    sn: index + 1,
+    userName: donor.userName,
+    email: donor.email,
+    phoneNumber: donor.phoneNumber,
+    bloodgroup: donor.bloodgroup,
+    dob: donor.dob ? new Date(donor.dob).toLocaleDateString() : "N/A",
+    lastDonation: donor.last_donation_date
+      ? new Date(donor.last_donation_date).toLocaleDateString()
+      : "N/A",
+    nextEligible: donor.next_eligible_date
+      ? new Date(donor.next_eligible_date).toLocaleDateString()
+      : "N/A",
+    address: `${donor.city ?? ""}, ${getDistrictName(
+      Number(donor.district)
+    )}, ${getProvinceName(Number(donor.province))}`,
+    actions: (
+      <button
+        className="text-red-600 hover:text-red-900"
+        onClick={() => handleDeleteDonor(donor.id)}
+      >
+        Delete
+      </button>
+    ),
+  }));
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">Donors</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {donors.map((donor: any) => (
-              <tr key={donor.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.blood_type}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.phone}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleDeleteDonor(donor.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <SectionTable
+      title="Donors"
+      columns={[
+        "SN",
+        "User Name",
+        "Email",
+        "Phone",
+        "Blood Group",
+        "DOB",
+        "Last Donation",
+        "Next Eligible",
+        "Address",
+        "Actions",
+      ]}
+      data={tableData}
+    />
   );
 }
 
-function RequestsSection() {
+/* ========================= Requests Section ========================= */
+function RequestsSection({ showToast }: any) {
   const dispatch = useAppDispatch();
   const { bloodRequests, status } = useAppSelector((state) => state.admin);
 
@@ -247,75 +320,94 @@ function RequestsSection() {
     dispatch(fetchBloodRequests());
   }, [dispatch]);
 
-  const handleUpdateStatus = (id: string, newStatus: string) => {
-    dispatch(updateBloodRequestStatus(id, newStatus));
+  const pendingRequests = bloodRequests.filter((r) => r.status !== "completed");
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      await dispatch(updateBloodRequestStatus(id, newStatus));
+      showToast(`Status updated to ${newStatus}`, "success");
+    } catch {
+      showToast("Failed to update status", "error");
+    }
   };
 
-  if (status === Status.LOADING) return <div>Loading...</div>;
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete request?")) return;
+
+    try {
+      await dispatch(deleteBloodRequest(id));
+      showToast("Request deleted successfully", "success");
+    } catch {
+      showToast("Failed to delete request", "error");
+    }
+  };
+
+  if (status === Status.LOADING) return <BloodLoader />;
+
+  const tableData = pendingRequests.map((req: IBloodRequest, index) => ({
+    sn: index + 1,
+    requester: req.requester_name,
+    phone: req.requester_phone,
+    address: req.requester_address,
+    donor: req.donorUserName || 'N/A',
+    donoremail: req.donorEmail || 'N/A',
+    donorphone: req.donorPhoneNumber || 'N/A',
+    donoraddress: req.donorCity ? `${req.donorCity ?? ""}, ${getDistrictName(
+      Number(req.donorDistrict)
+    )}, ${getProvinceName(Number(req.donorProvince))}` : 'N/A',
+    bloodgroup: req.blood_group,
+    status: req.status,
+    urgent: req.urgent ? (
+      <span className="bg-red-500 text-white px-2 py-1 rounded text-xs">
+        URGENT
+      </span>
+    ) : (
+      "Normal"
+    ),
+    date: req.request_date ? new Date(req.request_date).toLocaleDateString() : 'N/A',
+    actions: (
+      <div className="flex gap-2">
+        <button
+          className="text-green-600 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+          onClick={() => handleStatusChange(req.id, "completed")}
+        >
+          Complete
+        </button>
+        <button
+          className="text-red-600 text-xs px-2 py-1 border border-red-600 rounded hover:bg-red-50"
+          onClick={() => handleDelete(req.id)}
+        >
+          Delete
+        </button>
+      </div>
+    ),
+  }));
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">Blood Requests</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {bloodRequests.map((request: any) => (
-              <tr key={request.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.blood_type}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {request.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                  {request.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => handleUpdateStatus(request.id, 'approved')}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleUpdateStatus(request.id, 'rejected')}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                  {request.status === 'approved' && (
-                    <button
-                      onClick={() => handleUpdateStatus(request.id, 'completed')}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      Complete
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <SectionTable
+      title="Blood Requests"
+      columns={[
+        "SN",
+        "Requester",
+        "Phone",
+        "Address",
+        "Donor",
+        "Donor Email",
+        "Donor Phone",
+        "Donor Address",
+        "Blood Group",
+        "Status",
+        "Urgent",
+        "Date",
+        "Actions",
+      ]}
+      data={tableData}
+    />
   );
 }
 
-function DonationsSection() {
+/* ========================= Donations Section ========================= */
+function DonationsSection({ showToast }: any) {
   const dispatch = useAppDispatch();
   const { donations, status } = useAppSelector((state) => state.admin);
 
@@ -323,57 +415,167 @@ function DonationsSection() {
     dispatch(fetchDonations());
   }, [dispatch]);
 
-  if (status === Status.LOADING) return <div>Loading...</div>;
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete donation?")) return;
+
+    try {
+      await dispatch(deleteBloodRequest(id));
+      showToast("Donation deleted successfully", "success");
+    } catch {
+      showToast("Failed to delete donation", "error");
+    }
+  };
+
+  if (status === Status.LOADING) return <BloodLoader />;
+
+  const tableData = donations.map((item: IBloodRequest, index) => ({
+    sn: index + 1,
+    requester: item.requester_name,
+    phone: item.requester_phone,
+    address: item.requester_address,
+    donor: item.donorUserName || 'N/A',
+    donoremail: item.donorEmail || 'N/A',
+    donorphone: item.donorPhoneNumber || 'N/A',
+    donoraddress: `${item.donorCity ?? ""}, ${getDistrictName(
+      Number(item.donorDistrict)
+    )}, ${getProvinceName(Number(item.donorProvince))}`,
+    bloodgroup: item.blood_group,
+    urgent: item.urgent ? "URGENT" : "Normal",
+    status: item.status,
+    completeddate: item.completed_date
+      ? new Date(item.completed_date).toLocaleDateString()
+      : "N/A",
+    actions: (
+      <button
+        className="text-red-600 hover:text-red-900"
+        onClick={() => handleDelete(item.id)}
+      >
+        Delete
+      </button>
+    ),
+  }));
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">Completed Donations</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Donor ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requestor ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {donations.map((donation: any) => (
-              <tr key={donation.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donation.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donation.blood_type}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donation.donor_id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donation.requestor_id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {new Date(donation.created_at).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <SectionTable
+      title="Completed Donations"
+      columns={[
+        "SN",
+        "Requester",
+        "Phone",
+        "Address",
+        "Donor",
+        "Donor Email",
+        "Donor Phone",
+        "Donor Address",
+        "Blood Group",
+        "Urgent",
+        "Status",
+        "Completed Date",
+        "Actions",
+      ]}
+      data={tableData}
+    />
   );
 }
 
+/* ========================= Settings Section ========================= */
 function SettingsSection() {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">Settings</h2>
-      <p className="text-gray-600">
-        Manage admin profile or system preferences.
-      </p>
+      <h2 className="text-2xl font-semibold mb-4">Settings</h2>
+      <p className="text-gray-600">Manage admin preferences.</p>
     </div>
   );
 }
 
-function StatCard({ title, value }: { title: string; value: string }) {
+/* ========================= Stat Card ========================= */
+function StatCard({ title, value }: any) {
   return (
     <div className="bg-white shadow-md rounded-xl p-6 text-center border-t-4 border-red-500">
       <h3 className="text-lg font-medium text-gray-700">{title}</h3>
       <p className="text-3xl font-bold text-red-600 mt-2">{value}</p>
+    </div>
+  );
+}
+
+/* ========================= Fixed SectionTable ========================= */
+
+const columnKeyMap: Record<string, string> = {
+  SN: "sn",
+  "User Name": "userName",
+  Email: "email",
+  Phone: "phoneNumber",
+  Role: "role",
+  Requester: "requester",
+  Donor: "donor",
+  "Donor Email": "donoremail",
+  "Donor Phone": "donorphone",
+  "Donor Address": "donoraddress",
+  "Blood Group": "bloodgroup",
+
+  DOB: "dob",
+  "Last Donation": "lastDonation",
+  "Next Eligible": "nextEligible",
+  Address: "address",
+  Urgent: "urgent",
+  Date: "date",
+  Status: "status",
+  "Completed Date": "completeddate",
+  Actions: "actions",
+};
+
+function SectionTable({
+  title,
+  columns,
+  data,
+}: {
+  title: string;
+  columns: string[];
+  data: any[];
+}) {
+  return (
+    <div>
+      <h2 className="text-2xl font-semibold mb-4">{title}</h2>
+
+      <div className="bg-white shadow rounded-lg overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              {columns.map((col, idx) => (
+                <th key={idx} className="px-4 py-3">
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-gray-200">
+            {data.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="text-center py-8 text-gray-500"
+                >
+                  No data available
+                </td>
+              </tr>
+            ) : (
+              data.map((row, idx) => (
+                <tr key={idx}>
+                  {columns.map((col, cIdx) => {
+                    const key = columnKeyMap[col];
+                    return (
+                      <td key={cIdx} className="px-4 py-4">
+                        {row[key] ?? ""}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

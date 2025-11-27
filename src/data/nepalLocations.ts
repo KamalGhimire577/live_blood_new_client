@@ -14,6 +14,15 @@ export interface LocalLevel {
   name: string;
   district_id: number;
 }
+// src/data/nepalLocations.ts
+
+export const getProvinceName = (provinceId: number) => {
+  return provinces.find((p) => p.id === provinceId)?.name || "Unknown Province";
+};
+
+export const getDistrictName = (districtId: number) => {
+  return districts.find((d) => d.id === districtId)?.name || "Unknown District";
+};
 
 export const provinces: Province[] = [
   { id: 1, name: "Koshi Province" },

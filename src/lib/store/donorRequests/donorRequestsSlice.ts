@@ -54,7 +54,7 @@ export function fetchDonorRequests() {
       dispatch(setLoading(true));
 
       const response = await API.get<IDonorRequestsResponse>(
-        "/blood/request/fetchdatabyId/donoridfromuserid"
+        "blood/request/fetchdatabyId/donoridfromuserid"
       );
 
       if (response.status === 200) {

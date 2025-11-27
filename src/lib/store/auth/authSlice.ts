@@ -74,6 +74,13 @@ const authSlice = createSlice({
 
 export const { setUser, setStatus, setToken, logout } = authSlice.actions;
 export default authSlice.reducer;
+
+// Reset status action
+export function resetAuthStatus() {
+  return function resetAuthStatusThunk(dispatch: AppDispatch) {
+    dispatch(setStatus(Status.IDLE));
+  };
+}
 // Registration Thunk
 export function registerUser(data: IRegisterData) {
   return async function registerUserThunk(dispatch: AppDispatch) {
