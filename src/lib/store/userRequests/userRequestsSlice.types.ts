@@ -10,6 +10,9 @@ export interface IUserRequest {
   status: string;
   request_date: string;
   donor_id: number | null;
+  province: number | null;
+  district: number | null;
+  city: string | null;
   donor_full_address: string | null;
   donor_username: string | null;
   donor_phone: string | null;

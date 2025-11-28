@@ -2,10 +2,19 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAppSelector } from "@/lib/store/hooks";
+import { useRouter } from "next/navigation";
+import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
+import { logout } from "@/lib/store/auth/authSlice";
 
-const getMenuItems = (role: string) => {
-  const baseItems = [
+interface MenuItem {
+  title: string;
+  icon: string;
+  href: string;
+  onClick?: () => void;
+}
+
+const getMenuItems = (role: string): MenuItem[] => {
+  const baseItems: MenuItem[] = [
     {
       title: "Your Requests",
       icon: "M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2z",
@@ -45,11 +54,30 @@ const getMenuItems = (role: string) => {
 
 export default function Navbar() {
   const { user, token } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const menuItems = getMenuItems(user.role || "user");
+  
+  const handleLogout = () => {
+    const isAdmin = user?.role === "admin";
+    dispatch(logout());
+    
+    if (isAdmin) {
+      router.push("/auth/admin/signin");
+    } else {
+      router.push("/auth/signin");
+    }
+    
+    setProfileOpen(false);
+    setMenuOpen(false);
+  };
+  
+  const menuItems = getMenuItems(user.role || "user").map(item => 
+    item.title === "Logout" ? { ...item, onClick: handleLogout } : item
+  );
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -227,19 +255,32 @@ export default function Navbar() {
                   </div>
                   
                   <nav className="flex flex-col gap-2">
-                    {menuItems.map((item) => (
-                      <Link
-                        key={item.title}
-                        href={item.href}
-                        onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-red-700 text-red-300 hover:bg-red-800 hover:text-white transition-all text-sm"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                        </svg>
-                        {item.title}
-                      </Link>
-                    ))}
+                    {menuItems.map((item) => 
+                      item.title === "Logout" ? (
+                        <button
+                          key={item.title}
+                          onClick={item.onClick}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg border border-red-700 text-red-300 hover:bg-red-800 hover:text-white transition-all text-sm w-full text-left"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                          </svg>
+                          {item.title}
+                        </button>
+                      ) : (
+                        <Link
+                          key={item.title}
+                          href={item.href}
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg border border-red-700 text-red-300 hover:bg-red-800 hover:text-white transition-all text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                          </svg>
+                          {item.title}
+                        </Link>
+                      )
+                    )}
                   </nav>
                 </div>
               )}
@@ -372,13 +413,12 @@ export default function Navbar() {
               {/* Logout Button */}
               {token && (
                 <div className="p-4 border-t bg-white">
-                  <Link
-                    href="/logout"
-                    onClick={() => setMenuOpen(false)}
+                  <button
+                    onClick={handleLogout}
                     className="block w-full text-center py-3 px-4 text-white bg-linear-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 rounded-lg transition-colors font-medium"
                   >
                     Logout
-                  </Link>
+                  </button>
                 </div>
               )}
             </div>

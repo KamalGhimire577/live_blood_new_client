@@ -11,6 +11,10 @@ import { provinces, districts, localLevels } from "@/data/nepalLocations";
 export default function DonorCard() {
   const dispatch = useAppDispatch();
   const { donors, status } = useAppSelector((state) => state.donorauth);
+  const { user } = useAppSelector((state) => state.auth);
+
+  // Filter out current user from donors list
+  const filteredDonors = user.id ? donors.filter(donor => donor.userId !== user.id) : donors;
 
   // Function to get full address
   const getFullAddress = (provinceId: string, districtId: string, cityName: string) => {
@@ -33,7 +37,7 @@ export default function DonorCard() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-      {donors.map((donor, index) => (
+      {filteredDonors.map((donor, index) => (
         <div
           key={index}
           className="w-full bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-red-100"

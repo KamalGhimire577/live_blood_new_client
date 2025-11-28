@@ -1,22 +1,33 @@
 "use client";
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/lib/store/auth/authSlice";
-import { AppDispatch } from "@/lib/store/store";
+import { AppDispatch, RootState } from "@/lib/store/store";
 import { useRouter } from "next/navigation";
+import BloodLoader from "../Components/BloodLoader";
 
 export default function Logout() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const { user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    dispatch(logout()); // clear user + token from Redux and localStorage
-    router.push("/auth/signin"); // redirect to login page
-  }, [dispatch, router]);
+    const isAdmin = user?.role === "admin";
+    dispatch(logout());
+    
+    if (isAdmin) {
+      router.push("/auth/admin/signin");
+    } else {
+      router.push("/auth/signin");
+    }
+  }, [dispatch, router, user?.role]);
 
   return (
+    <>
     <div className="flex items-center justify-center h-screen">
-      <p className="text-lg font-semibold">Logging out...</p>
+      <BloodLoader />
+      <p className="text-lg font-semibold text-red-500">Logging out...</p>
     </div>
+    </>
   );
 }

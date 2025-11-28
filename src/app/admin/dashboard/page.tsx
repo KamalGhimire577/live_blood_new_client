@@ -28,6 +28,8 @@ import BloodLoader from "@/app/Components/BloodLoader";
 
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -50,17 +52,56 @@ export default function AdminDashboard() {
   const adminName = user.userName || "Admin";
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/auth/admin/signin");
+    router.push("/logout");
+    setProfileOpen(false);
   };
+
+  const handleUserView = () => {
+    router.push("/");
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const profileDropdown = document.getElementById('profile-dropdown');
+      const profileButton = document.getElementById('profile-button');
+      
+      if (profileOpen && profileDropdown && !profileDropdown.contains(event.target as Node) && !profileButton?.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+
+    if (profileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileOpen]);
 
   return (
     <div className="flex min-h-screen bg-gray-100 overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md flex flex-col">
-        <div className="p-6 font-bold text-red-600 text-2xl border-b border-gray-200">
-          LiveBlood Admin
+      <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-md flex flex-col transition-transform duration-300 ease-in-out`}>
+        <div className="p-6 font-bold text-red-600 text-2xl border-b border-gray-200 flex items-center justify-between">
+          <span>Hi {adminName}</span>
+          <button 
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-1 rounded-full hover:bg-gray-100"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div className="p-4 text-gray-600 text-sm border-b border-gray-100">
@@ -103,7 +144,16 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <Header activeSection={activeSection} adminName={adminName} />
+        <Header 
+          activeSection={activeSection} 
+          adminName={adminName} 
+          profileOpen={profileOpen}
+          setProfileOpen={setProfileOpen}
+          setSidebarOpen={setSidebarOpen}
+          handleLogout={handleLogout}
+          handleUserView={handleUserView}
+          user={user}
+        />
 
         <main className="p-6 space-y-6">
           {activeSection === "dashboard" && <DashboardSection />}
@@ -133,21 +183,123 @@ export default function AdminDashboard() {
 }
 
 /* ========================= Header ========================= */
-function Header({ activeSection, adminName }: any) {
+function Header({ activeSection, adminName, profileOpen, setProfileOpen, setSidebarOpen, handleLogout, handleUserView, user }: any) {
   return (
-    <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
-      <h1 className="text-xl font-bold text-red-600 capitalize">
-        {activeSection}
-      </h1>
+    <header className="bg-white shadow-md p-4 flex items-center sticky top-0 z-10">
+      <div className="flex items-center gap-4">
+        {/* Mobile Menu Button */}
+        <button 
+          onClick={() => setSidebarOpen(true)}
+          className="lg:hidden p-2 rounded-md hover:bg-gray-100"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        
+        <h1 className="text-xl font-bold text-red-600 capitalize">
+          {activeSection}
+        </h1>
+      </div>
+
+      {/* Center Search Bar and User View Button */}
+      <div className="flex-1 flex justify-center items-center gap-4 mx-4">
+        <div className="relative max-w-md w-full">
+          <input
+            type="text"
+            placeholder="Search..."
+            className="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+          />
+          <svg
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
+            />
+          </svg>
+        </div>
+        
+        <button
+          onClick={handleUserView}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+        >
+          User View
+        </button>
+      </div>
 
       <div className="flex items-center gap-4">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
-        />
-        <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold">
-          {adminName[0]}
+        {/* Profile Dropdown */}
+        <div className="relative">
+          <div
+            id="profile-button"
+            onClick={() => setProfileOpen(!profileOpen)}
+            className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold">
+              {adminName[0]}
+            </div>
+            <svg className={`w-4 h-4 text-gray-600 transition-transform ${profileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          
+          {profileOpen && (
+            <div 
+              id="profile-dropdown"
+              className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
+            >
+              {/* Close Button */}
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={() => setProfileOpen(false)}
+                  className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* User Info */}
+              <div className="flex flex-col items-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xl mb-3">
+                  {adminName[0]}
+                </div>
+                <h3 className="font-bold text-gray-900">{user.userName || 'Admin'}</h3>
+                <p className="text-gray-600 text-sm">{user.phoneNumber || user.email}</p>
+                <p className="text-red-600 font-semibold text-sm">Role: {user.role || 'admin'}</p>
+              </div>
+              
+              {/* Menu Items */}
+              <div className="space-y-2">
+                <button
+                  onClick={handleUserView}
+                  className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  User View
+                </button>
+                
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors text-sm border-t border-gray-200 mt-2 pt-3"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

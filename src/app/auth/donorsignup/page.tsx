@@ -56,6 +56,7 @@ export default function DonorForm() {
   const [errors, setErrors] = useState<ErrorType>({});
   const [ageError, setAgeError] = useState<string>("");
   const [donationDateError, setDonationDateError] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Prevent cached success/error when returning to page
   useEffect(() => {
@@ -182,30 +183,22 @@ export default function DonorForm() {
 
   // Success popup and redirect
   useEffect(() => {
-    if (status === Status.SUCCESS && !showSuccessPopup) {
+    if (status === Status.SUCCESS) {
       setShowSuccessPopup(true);
       const timer = setTimeout(() => {
-        setFormData({
-          fullName: "",
-          email: "",
-          password: "",
-          phone: "",
-          province: "",
-          district: "",
-          city: "",
-          bloodgroup: "",
-          dob: "",
-          lastDonation: "",
-          confirmEligibility: false,
-        });
-        dispatch(resetDonorState());
-        setShowSuccessPopup(false);
         router.push("/auth/signin");
       }, 2000);
 
       return () => clearTimeout(timer);
     }
-  }, [status, router, dispatch, showSuccessPopup]);
+  }, [status]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(resetDonorState());
+    };
+  }, [dispatch]);
 
   // Loader
   if (status === Status.LOADING) {
@@ -220,18 +213,18 @@ export default function DonorForm() {
     <>
       {/* Success Popup */}
       {showSuccessPopup && (
-        <>
-          <BloodLoader />
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <div className="text-green-500 text-4xl mb-4">✓</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Donor Registration Successful!
-              </h3>
-              <p className="text-gray-600">Redirecting to sign in...</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm mx-4">
+            <div className="text-green-500 text-6xl mb-4">✓</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Donor Registration Successful!
+            </h3>
+            <p className="text-gray-600">Redirecting to sign in...</p>
+            <div className="mt-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* FORM */}
@@ -285,13 +278,31 @@ export default function DonorForm() {
             {/* Password */}
             <div>
               <label className="text-sm font-medium">Password</label>
-              <input
-                name="password"
-                type="password"
-                className="w-full border border-red-400 rounded p-2 text-red-400"
-                onChange={handleChange}
-                value={formData.password}
-              />
+              <div className="relative">
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  className="w-full border border-red-400 rounded p-2 pr-10 text-red-400"
+                  onChange={handleChange}
+                  value={formData.password}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-red-500 text-sm">{errors.password}</p>
               )}

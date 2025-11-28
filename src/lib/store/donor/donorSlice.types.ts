@@ -18,6 +18,7 @@ export interface IDonorData {
 // Backend response structure
 export interface IEligibleDonorData {
   donorId: string,
+  userId: string,
   donorName: string,
   email: string,
   phoneNumber: string,

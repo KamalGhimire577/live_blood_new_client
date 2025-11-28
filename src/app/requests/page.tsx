@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { fetchUserRequests } from "@/lib/store/userRequests/userRequestsSlice";
 import { Status } from "@/lib/types/type";
 import BloodLoader from "../Components/BloodLoader";
+import { getDistrictName, getProvinceName } from "@/data/nepalLocations";
 
 export default function RequestsPage() {
   const dispatch = useAppDispatch();
@@ -13,10 +14,17 @@ export default function RequestsPage() {
   const { user, token } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-  if (!token) {
+    if (!token) {
       router.push("/auth/signin");
+      return;
     }
-  }, [token, router]);
+    
+    // Redirect admin users to admin dashboard
+    if (user?.role === "admin") {
+      router.push("/admin/dashboard");
+      return;
+    }
+  }, [token, user?.role, router]);
   const { requests, status, error } = useAppSelector(
     (state) => state.userRequests
   );
@@ -74,7 +82,7 @@ export default function RequestsPage() {
                         className={`ml-2 px-2 py-1 rounded text-sm ${
                           request.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"
-                            : request.status === "accepted"
+                            : request.status === "completed"
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
@@ -113,7 +121,9 @@ export default function RequestsPage() {
                         </p>
                         <p>
                           <span className="font-medium">Address:</span>{" "}
-                          {request.donor_full_address}
+                          {`${request.city}, ${getDistrictName(
+                            Number(request.district)
+                          )}, ${getProvinceName(Number(request.province))}`}
                         </p>
                       </>
                     ) : (
